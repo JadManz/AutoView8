@@ -1,14 +1,4 @@
-// v8dasm.cpp - View8's disassembler, written for V8 8.4 (NW.js 0.47.2).
-//
-//   v8dasm app.bin > disasm.txt       print every function in app.bin
-//   v8dasm --make-test test.bin        write a small test cache (used by CI)
-//
-// How it works: we hand app.bin to V8 as a "code cache" for a dummy script.
-// The patched V8 (see patch-v84.sh) skips its safety checks, loads the
-// functions, and prints each one (name, bytecode, constants) to stdout.
-//
-// The build compiles this file in place of V8's samples/hello-world.cc,
-// so it uses V8's own compiler and settings. Plain C++14, no tricks.
+// v8dasm.cpp dasm for (NW.js 0.47.2)
 
 #include <cstdio>
 #include <fstream>
@@ -21,8 +11,7 @@
 #include "include/libplatform/libplatform.h"
 #include "include/v8.h"
 
-// Small program for the self-test: functions, objects, arrays, strings,
-// doubles, try/catch, a loop and a switch - the shapes the game uses.
+
 static const char kTestJs[] =
     "var clips = { '8020-8120': 42.833, start: [1, 2, 3], d: [1.5, 2.25] };\n"
     "function govid(name) {\n"
@@ -65,14 +54,12 @@ static int Disassemble(v8::Isolate* isolate, const char* in_path) {
     return 2;
   }
 
-  // The Source below takes ownership of this and frees it.
   auto* cached = new v8::ScriptCompiler::CachedData(
       data.data(), static_cast<int>(data.size()));
   v8::ScriptOrigin origin(v8::String::NewFromUtf8Literal(isolate, "app.bin"));
   v8::ScriptCompiler::Source source(
       v8::String::NewFromUtf8Literal(isolate, "\"dummy\""), origin, cached);
 
-  // This is where the patched V8 prints everything.
   v8::MaybeLocal<v8::UnboundScript> script =
       v8::ScriptCompiler::CompileUnboundScript(
           isolate, &source, v8::ScriptCompiler::kConsumeCodeCache);
@@ -97,7 +84,6 @@ int main(int argc, char* argv[]) {
     return 2;
   }
 
-  // Compile everything up front and never throw bytecode away.
   v8::V8::SetFlagsFromString("--no-lazy --no-flush-bytecode");
   v8::V8::InitializeICUDefaultLocation(argv[0]);
   v8::V8::InitializeExternalStartupData(argv[0]);

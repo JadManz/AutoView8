@@ -1,16 +1,5 @@
 #!/usr/bin/env bash
-# build.sh - build View8's disassembler (v8dasm) for V8 8.4.371.22 on Ubuntu.
-#
-# Run by GitHub (.github/workflows/v8dasm-linux-84.yml). You don't run this
-# on your laptop - it needs ~15 GB of disk and an hour of CPU.
-#
-#   PC=true  bash linux84/build.sh   -> pointer compression ON
-#   PC=false bash linux84/build.sh   -> pointer compression OFF
-#
-# Why two? NW.js may have built its V8 either way, and the disassembler
-# must match exactly. GitHub builds both; whichever reads app.bin is right.
-#
-# Result: out/v8dasm-8.4.371.22-pc-on (or -pc-off), plus a self-test.
+# build.sh build View8's disassembler (v8dasm) for V8 8.4.371.22 on Ubuntu.
 
 set -euo pipefail
 
@@ -27,7 +16,7 @@ step() { echo; echo "=====[ $* ]====="; }
 step "1/8 System tools"
 sudo apt-get update -qq
 sudo apt-get install -y -qq python2 ninja-build pkg-config curl git xz-utils lsb-release
-# V8 8.4 is from 2020: its build scripts call plain "python" and expect Python 2.
+# python2 for old v8 2020
 sudo ln -sf /usr/bin/python2 /usr/local/bin/python
 python --version
 
@@ -45,7 +34,7 @@ if [ ! -d v8/.git ]; then
   git -C v8 remote add origin https://chromium.googlesource.com/v8/v8.git
 fi
 git -C v8 fetch --depth 1 origin "refs/tags/$V8_VERSION:refs/tags/$V8_VERSION"
-git -C v8 -c advice.detachedHead=false checkout -f "tags/$V8_VERSION"
+# detached hea false doesnt work, so is removed.
 git -C v8 log -1 --format='checked out %H (%cd)'
 
 # "managed: False" = gclient leaves our v8 checkout alone and only
@@ -73,7 +62,7 @@ python build/util/lastchange.py -o build/util/LASTCHANGE || {
 
 step "5/8 Patch V8 so it prints functions"
 bash "$HERE/patch-v84.sh" "$WORK/v8"
-# Our tool replaces V8's hello-world sample, so V8's own build compiles it.
+# replace V8 hello-world sample for V8 build to compile it
 cp "$HERE/v8dasm.cpp" samples/hello-world.cc
 
 step "6/8 Configure (pointer compression = $PC)"
@@ -88,7 +77,7 @@ icu_use_data_file=false
 treat_warnings_as_errors=false
 symbol_level=0
 use_goma=false"
-ARGS=$(echo $ARGS)   # one line
+ARGS=$(echo $ARGS)
 echo "$ARGS"
 buildtools/linux64/gn gen out/dasm --args="$ARGS"
 

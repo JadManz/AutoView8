@@ -1,0 +1,51 @@
+# Builds View8's disassembler for V8 8.4.371.22 (NW.js 0.47.2) on Linux.
+# Start it by hand: Actions tab -> "v8dasm Linux (V8 8.4)" -> Run workflow.
+# Builds two versions side by side (pointer compression on / off).
+
+name: v8dasm Linux (V8 8.4)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: V8 8.4.371.22 - pointer compression ${{ matrix.pc }}
+    runs-on: ubuntu-22.04
+    timeout-minutes: 340
+    strategy:
+      fail-fast: false
+      matrix:
+        pc: [true, false]
+    env:
+      V8_VERSION: 8.4.371.22
+      PC: ${{ matrix.pc }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - name: Build v8dasm
+        run: bash linux84/build.sh
+
+      - name: Try View8 on the self-test
+        continue-on-error: true
+        run: |
+          pip install parse
+          bin=$(ls out/v8dasm-*)
+          python3 view8.py out/selftest.bin out/selftest.js --path "$bin"
+          echo "----- decompiled self-test -----"
+          cat out/selftest.js
+
+      - name: Upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v8dasm-8.4.371.22-linux-pc-${{ matrix.pc }}
+          path: out/
+          if-no-files-found: ignore
+          retention-days: 30
